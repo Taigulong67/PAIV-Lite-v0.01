@@ -4,6 +4,17 @@
 > 
 > 从对话样本中提取个人 AI 特征，生成 Gemini/Claude 可用的 System Prompt
 
+[![Deploy on Vercel](https://img.shields.io/badge/Vercel-Deployed-success?style=flat&logo=vercel)](https://vercel.com)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat&logo=github)](https://github.com/ningzhou2006/PAIV-Lite)
+
+---
+
+## 🌐 在线访问
+
+**Vercel部署**: https://vercel.com/ningzhou2006s-projects/paiv-lite
+
+无需安装，直接在浏览器中使用！
+
 ---
 
 ## 🚀 快速开始
