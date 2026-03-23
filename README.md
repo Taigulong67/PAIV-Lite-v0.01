@@ -1,17 +1,17 @@
-# PAIV-Lite
+# PAIV-Lite-v0.01
 
-> Personal AI Identity & Values Protocol - Lite Version
+> Personal AI Identity & Values Protocol - Lite Version v0.01
 > 
 > 从对话样本中提取个人 AI 特征，生成 Gemini/Claude 可用的 System Prompt
 
 [![Deploy on Vercel](https://img.shields.io/badge/Vercel-Deployed-success?style=flat&logo=vercel)](https://vercel.com)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat&logo=github)](https://github.com/ningzhou2006/PAIV-Lite)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat&logo=github)](https://github.com/taigulong67/PAIV-Lite-v0.01)
 
 ---
 
 ## 🌐 在线访问
 
-**Vercel部署**: https://vercel.com/ningzhou2006s-projects/paiv-lite
+**Vercel部署**: https://vercel.com/taigulong67s-projects/paiv-lite-v0.01
 
 无需安装，直接在浏览器中使用！
 
@@ -52,7 +52,7 @@ npm run build
 ## 🏗️ 技术架构
 
 ```
-PAIV-Lite/
+PAIV-Lite-v0.01/
 ├── frontend/          # React + Vite 前端
 │   ├── src/
 │   │   ├── components/
