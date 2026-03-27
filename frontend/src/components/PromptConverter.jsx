@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { Upload, FileText, Copy, Check, Sparkles, Download } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL || 'https://paiv-lite-v0-01.onrender.com'
 
 // 示例对话数据 - ChatGPT与太古龙66的PAIV协议深度对话
 const SAMPLE_DIALOGUES = [
