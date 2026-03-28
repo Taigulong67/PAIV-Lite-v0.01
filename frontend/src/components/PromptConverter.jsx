@@ -57,8 +57,8 @@ export default function PromptConverter() {
       if (!trimmedLine) continue
 
       // 检测角色标记（支持多种格式）
-      const userMatch = trimmedLine.match(/^(用户|User|user|我|Human):\s*(.*)/)
-      const assistantMatch = trimmedLine.match(/^(AI|Assistant|assistant|助手|AI助手|ChatGPT|Claude|Gemini):\s*(.*)/)
+      const userMatch = trimmedLine.match(/^(用户|User|user|我|Human|U|USER):\s*(.*)/)
+      const assistantMatch = trimmedLine.match(/^(AI|Assistant|assistant|助手|AI助手|ChatGPT|Claude|Gemini|A|ASSISTANT):\s*(.*)/)
 
       if (userMatch) {
         // 保存之前的消息
@@ -117,9 +117,9 @@ export default function PromptConverter() {
       // 根据输入模式选择数据源
       let dialogues
       if (inputMethod === 'sample') {
-        dialogues = [selectedDialogue]  // 使用选中的示例
+        dialogues = [selectedDialogue]
       } else {
-        dialogues = parseManualInput(manualInput)  // 解析手动输入
+        dialogues = parseManualInput(manualInput)
       }
 
       if (!dialogues || dialogues.length === 0 || !dialogues[0].messages || dialogues[0].messages.length === 0) {
@@ -136,8 +136,7 @@ export default function PromptConverter() {
       setResult(response.data)
     } catch (err) {
       console.error('API Error:', err)
-      setError(err.response?.data?.error || err.message || '转换失败')
-      // 如果 API 不可用，使用本地转换逻辑
+      // API 失败时使用本地转换
       handleLocalConvert()
     } finally {
       setLoading(false)
@@ -168,6 +167,7 @@ export default function PromptConverter() {
     }
   }
 
+  // ========== 改进版特征提取函数 ==========
   const extractFeatures = (dialogues) => {
     const features = {
       tone: [],
@@ -175,10 +175,17 @@ export default function PromptConverter() {
       expertise: []
     }
 
-    // 安全获取所有内容
+    // 获取所有内容（包括 user 和 assistant）
     let allContent = ''
+    let assistantContent = ''
     try {
       allContent = dialogues
+        .filter(d => d && d.messages)
+        .flatMap(d => d.messages.filter(m => m && m.content))
+        .map(m => m.content)
+        .join(' ')
+      
+      assistantContent = dialogues
         .filter(d => d && d.messages)
         .flatMap(d => d.messages.filter(m => m && m.role === 'assistant' && m.content))
         .map(m => m.content)
@@ -190,40 +197,101 @@ export default function PromptConverter() {
 
     if (!allContent) return features
 
-    // 语调分析
-    if (allContent.includes('👉') || allContent.includes('✅') || allContent.includes('🚀')) {
+    // 使用 assistant 回复为主，如果没有则用全部内容
+    const content = assistantContent || allContent
+
+    // ========== 语调分析（更智能）==========
+    // 指令型/直接型
+    if (content.includes('👉') || content.includes('✅') || content.includes('❌') || 
+        content.includes('必须') || content.includes('关键') || content.includes('核心') ||
+        content.includes('重要的是') || content.includes('注意') || content.includes('切记')) {
       features.tone.push('directive')
     }
-    if (allContent.includes('？') || allContent.includes('为什么') || allContent.includes('分析')) {
+    
+    // 分析型
+    if (content.includes('？') || content.includes('为什么') || content.includes('分析') ||
+        content.includes('原因') || content.includes('逻辑') || content.includes('思考') ||
+        content.includes('理解') || content.includes('解读') || content.includes('剖析')) {
       features.tone.push('analytical')
     }
-    if (allContent.includes('坦诚') || allContent.includes('关键') || allContent.includes('实话')) {
+    
+    // 坦诚直接型
+    if (content.includes('坦诚') || content.includes('实话') || content.includes('直接说') ||
+        content.includes('不绕弯') || content.includes('现实是') || content.includes('问题在于') ||
+        content.includes('老实说') || content.includes('坦白讲') || content.includes('直白')) {
       features.tone.push('candid')
     }
-    if (allContent.includes('建议') || allContent.includes('可以考虑')) {
+    
+    // 顾问型
+    if (content.includes('建议') || content.includes('可以考虑') || content.includes('我的判断') ||
+        content.includes('推荐') || content.includes('方案') || content.includes('策略') ||
+        content.includes('方案是') || content.includes('做法是') || content.includes('思路')) {
       features.tone.push('advisory')
     }
 
-    // 沟通风格
-    if (allContent.includes('✅') || allContent.includes('❌') || allContent.includes('👉')) {
+    // ========== 沟通风格分析 ==========
+    // 视觉化标记
+    if (content.includes('✅') || content.includes('❌') || content.includes('👉') ||
+        content.includes('⚠️') || content.includes('💡') || content.includes('🔍') ||
+        content.includes('⭐') || content.includes('📌') || content.includes('🎯')) {
       features.communicationStyle.push('visual_markers')
     }
-    if (allContent.match(/\d\./) || allContent.includes('阶段') || allContent.includes('步骤')) {
-      features.communicationStyle.push('structured')
+    
+    // 结构化 - 数字列表
+    if (content.match(/\d[\.\、\)]/)) {
+      features.communicationStyle.push('structured_numbered')
     }
-    if (allContent.includes('类比') || allContent.includes('类似') || allContent.includes('像')) {
+    
+    // 结构化 - 流程/阶段
+    if (content.includes('阶段') || content.includes('步骤') || content.includes('流程') ||
+        content.includes('首先') || content.includes('然后') || content.includes('最后') ||
+        content.includes('第一') || content.includes('第二') || content.includes('第三')) {
+      features.communicationStyle.push('structured_flow')
+    }
+    
+    // 使用类比
+    if (content.includes('类比') || content.includes('类似') || content.includes('像') ||
+        content.includes('如同') || content.includes('相当于') || content.match(/如.*?般/) ||
+        content.includes('好比') || content.includes('就像') || content.includes('类似于')) {
       features.communicationStyle.push('analogical')
     }
+    
+    // 列举对比
+    if (content.includes('vs') || content.includes('对比') || content.includes(' versus ') ||
+        content.includes('A)') || content.includes('B)') || content.includes('选项') ||
+        content.includes('或者') || content.includes('还是') || content.includes(' versus ') ||
+        content.includes('优势') || content.includes('劣势')) {
+      features.communicationStyle.push('comparative')
+    }
 
-    // 专业领域
-    if (allContent.includes('商业化') || allContent.includes('融资') || allContent.includes('投资')) {
+    // ========== 专业领域分析 ==========
+    // 商业/战略
+    if (content.includes('商业') || content.includes('商业模式') || content.includes('盈利') ||
+        content.includes('融资') || content.includes('投资') || content.includes('市场') ||
+        content.includes('竞品') || content.includes('战略') || content.includes('增长') ||
+        content.includes('收入') || content.includes('成本') || content.includes('利润')) {
       features.expertise.push('business_strategy')
     }
-    if (allContent.includes('协议') || allContent.includes('标准') || allContent.includes('RFC')) {
-      features.expertise.push('protocol_design')
-    }
-    if (allContent.includes('产品') || allContent.includes('用户') || allContent.includes('MVP')) {
+    
+    // 产品
+    if (content.includes('产品') || content.includes('MVP') || content.includes('用户') ||
+        content.includes('需求') || content.includes('功能') || content.includes('迭代') ||
+        content.includes('体验') || content.includes('设计') || content.includes('原型')) {
       features.expertise.push('product_management')
+    }
+    
+    // 技术/协议
+    if (content.includes('技术') || content.includes('协议') || content.includes('标准') ||
+        content.includes('API') || content.includes('架构') || content.includes('RFC') ||
+        content.includes('代码') || content.includes('开发') || content.includes('系统')) {
+      features.expertise.push('technical_protocol')
+    }
+    
+    // 运营/营销
+    if (content.includes('运营') || content.includes('营销') || content.includes('推广') ||
+        content.includes('获客') || content.includes('转化') || content.includes('品牌') ||
+        content.includes('流量') || content.includes('渠道') || content.includes('投放')) {
+      features.expertise.push('growth_marketing')
     }
 
     return features
@@ -231,16 +299,18 @@ export default function PromptConverter() {
 
   const generateLocalPrompt = (features, name) => {
     const toneMap = {
-      'directive': '直接明确，善用指示符（👉）强调重点',
+      'directive': '直接明确，善用指示符强调重点',
       'analytical': '深度分析，善于提问引导思考',
       'candid': '坦诚直接，指出关键问题不绕弯',
       'advisory': '顾问式建议，提供可执行方案'
     }
 
     const styleMap = {
-      'visual_markers': '视觉化标记（✅❌👉）强化信息层次',
-      'structured': '结构化呈现（数字列表、阶段划分）',
-      'analogical': '善用类比帮助理解'
+      'visual_markers': '视觉化标记强化信息层次',
+      'structured_numbered': '数字列表结构化呈现',
+      'structured_flow': '流程化阐述（首先/然后/最后）',
+      'analogical': '善用类比帮助理解',
+      'comparative': '对比分析不同选项'
     }
 
     const toneDesc = features.tone.length > 0
